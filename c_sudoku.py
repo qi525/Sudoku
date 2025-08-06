@@ -549,6 +549,8 @@ class Sudoku:
                     self.__fill_draft(grid)
 
                 #self.__check_answer()
+            else:
+                print(f"无法在原始谜题的格子 ({self.__actived_grid[0]}, {self.__actived_grid[1]}) 中输入数字。") # Debugging line
 
 
     def cancel_num(self, pos = (0, 0)):
