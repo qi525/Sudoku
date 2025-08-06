@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-import wx
+
 import os
 import time
 import copy
 import pdb
 import random
+import wx
 
 class Sudoku:
     SCALE               = 3             # 游戏规模为 scale * scale
@@ -25,32 +26,31 @@ class Sudoku:
 
     def __init__(self, pos = (0, 0)):
         self.__anchor_pos       = pos
-        self.__puzzle_sudoku    = [[0 for a in range(1, Sudoku.GRID_NUM + 1)] for b in range(Sudoku.GRID_NUM)]
+        self.__puzzle_sudoku    = [[0 for a in range(Sudoku.GRID_NUM)] for b in range(Sudoku.GRID_NUM)]
         self.__answer_sudoku    = copy.deepcopy(self.__puzzle_sudoku)
-        self.__draft_sudoku     = [[[] for a in range(1, Sudoku.GRID_NUM + 1)] for b in range(Sudoku.GRID_NUM)]
+        self.__draft_sudoku     = [[[] for a in range(Sudoku.GRID_NUM)] for b in range(Sudoku.GRID_NUM)]
 
 
-    def init_sudoku(self, init_str = u"", puzzle_file = u"game.pzl"):
+    def init_sudoku(self, init_str = "", puzzle_file = "game.pzl"):
         '''初始化指定谜题'''
 
-        #如果没有指定则使用随机题
-        if len(init_str) == 0:
-            if len(self.__puzzle_lib) == 0:
-                f = file(puzzle_file, 'r')
-                self.__puzzle_lib = f.readlines()
-                f.close()
-            while len(init_str) == 0:
+        # 如果没有指定则使用随机题
+        if not init_str:
+            if not self.__puzzle_lib:
+                with open(puzzle_file, 'r', encoding='utf-8') as f:
+                    self.__puzzle_lib = f.readlines()
+            while not init_str:
                 self.__puzzle_idx = random.randint(0, len(self.__puzzle_lib) - 1)
-                init_str = self.__puzzle_lib[self.__puzzle_idx].strip('\n')
+                init_str = self.__puzzle_lib[self.__puzzle_idx].strip('\n') # type: ignore
 
-        self.__puzzle_sudoku   = [[0 for a in range(1, Sudoku.GRID_NUM + 1)] for b in range(Sudoku.GRID_NUM)]
+        self.__puzzle_sudoku   = [[0 for a in range(Sudoku.GRID_NUM)] for b in range(Sudoku.GRID_NUM)]
         if len(init_str) == Sudoku.GRID_NUM ** 2 and init_str.isdigit():
-            for i in range(Sudoku.GRID_NUM):        # Y轴循环
-                for j in range(Sudoku.GRID_NUM):    # X轴循环
+            for i in range(Sudoku.GRID_NUM):  # Y轴循环
+                for j in range(Sudoku.GRID_NUM):  # X轴循环
                     self.__puzzle_sudoku[i][j] = int(init_str[i * Sudoku.GRID_NUM + j])
 
         # 初始化草稿
-        self.__draft_sudoku     = [[[] for a in range(1, Sudoku.GRID_NUM + 1)] for b in range(Sudoku.GRID_NUM)]
+        self.__draft_sudoku     = [[[] for a in range(Sudoku.GRID_NUM)] for b in range(Sudoku.GRID_NUM)]
 
         # 初始化答案
         self.__answer_sudoku    = copy.deepcopy(self.__puzzle_sudoku)
@@ -68,12 +68,12 @@ class Sudoku:
 
     def __debug_print(self, arr):
         '''在控制台调试打印数组'''
-        print u"----------------------"
+        print("----------------------")
         for i in range(len(arr)):        # Y轴循环
             for j in range(len(arr[i])):    # X轴循环
-                print arr[i][j],'|',
-            print
-        print u"----------------------"
+                print(arr[i][j], end=' | ')
+            print()
+        print("----------------------")
 
 
     def get_puzzle_str(self):
@@ -123,8 +123,8 @@ class Sudoku:
                     if len(self.__draft_sudoku[i][j]) == 1:
                         self.__actived_grid = (i, j)
                         self.__affected_grids = self.__get_affect(self.__actived_grid)
-                        self.__actived_num = self.__draft_sudoku[i][j][0]
-                        print u"单元格", j, i, u"只有一个可能数字", self.__draft_sudoku[i][j][0]
+                        self.__actived_num = self.__draft_sudoku[i][j][0] # type: ignore
+                        print("单元格", j, i, "只有一个可能数字", self.__draft_sudoku[i][j][0])
                         self.input_num(self.__draft_sudoku[i][j][0])
                         loop = True
                         del self.__draft_sudoku[i][j][:]
@@ -140,13 +140,14 @@ class Sudoku:
                             # 获得新答案
                             self.__actived_grid = (i, j)
                             self.__affected_grids = self.__get_affect(self.__actived_grid)
-                            self.__actived_num = self.__draft_sudoku[i][j][k]
-                            print u"单元格", j, i, u"区内唯一数字", self.__draft_sudoku[i][j][k]
+                            self.__actived_num = self.__draft_sudoku[i][j][k] # type: ignore
+                            print("单元格", j, i, "区内唯一数字", self.__draft_sudoku[i][j][k])
                             self.input_num(self.__draft_sudoku[i][j][k])
                             loop = True
                             del self.__draft_sudoku[i][j][:]
                             return
-                            break
+                            # break # This break is unreachable after return
+
 
         # 运行到这说明根据草稿没有得到直观解，对草稿做二次排除
         self.__reduce_draft()
@@ -184,25 +185,25 @@ class Sudoku:
                             if n in self.__draft_sudoku[y][x]:
                                 if x_uniq == -1:
                                     x_uniq = x
-                                elif x_uniq != x:
+                                elif x_uniq != x: # type: ignore
                                     # 这表示此当前查找的数字存在于2个x坐标中，没有帮助
                                     x_uniq = -2
 
                                 if y_uniq == -1:
                                     y_uniq = y
-                                elif y_uniq != y:
+                                elif y_uniq != y: # type: ignore
                                     y_uniq = -2
                     if x_uniq > 0:
                         # 此n已在此区独占x_uniq轴，与其同列的另外两区中x_uniq上不可能存在n
                         for yy in range(Sudoku.GRID_NUM):
                             if (yy // Sudoku.SCALE) != i and n in self.__draft_sudoku[yy][x_uniq]:
-                                print x_uniq, yy, u"不应有", n, u"已被", j, i, u"区独占"
+                                print(x_uniq, yy, "不应有", n, "已被", j, i, "区独占")
                                 self.__draft_sudoku[yy][x_uniq].remove(n)
 
                     if y_uniq > 0:
                         for xx in range(Sudoku.GRID_NUM):
                             if (xx // Sudoku.SCALE) != j and n in self.__draft_sudoku[y_uniq][xx]:
-                                print xx, y_uniq, u"不应有", n, u"已被", j, i, u"区独占"
+                                print(xx, y_uniq, "不应有", n, "已被", j, i, "区独占")
                                 self.__draft_sudoku[y_uniq][xx].remove(n)
 
 
@@ -246,9 +247,9 @@ class Sudoku:
         arr[row][col]可以是整形数字, 也可以是list
         如果var小于0, 则使用arr[row][col]进行判断
         唯一返回True, 否则返回False'''
-        #print self.__is_unique_row(arr, row, col, var)
-        #print self.__is_unique_col(arr, row, col, var)
-        #print self.__is_unique_zone(arr, row, col, var)
+        #print(self.__is_unique_row(arr, row, col, var))
+        #print(self.__is_unique_col(arr, row, col, var))
+        #print(self.__is_unique_zone(arr, row, col, var))
         return self.__is_unique_row(arr, row, col, var) or self.__is_unique_col(arr, row, col, var) or self.__is_unique_zone(arr, row, col, var)
 
 
@@ -263,10 +264,10 @@ class Sudoku:
         if var > 0:
             for i in range(len(arr[row])):
                 if i != col:
-                    if type(0) == type(arr[row][i]):
+                    if isinstance(arr[row][i], int):
                         if var == arr[row][i]:
                             return False
-                    elif type([]) == type(arr[row][i]):
+                    elif isinstance(arr[row][i], list):
                         if var in arr[row][i]:
                             return False
 
@@ -284,10 +285,10 @@ class Sudoku:
         if var > 0:
             for i in range(len(arr)):
                 if i != row:
-                    if type(0) == type(arr[i][col]):
+                    if isinstance(arr[i][col], int):
                         if var == arr[i][col]:
                             return False    # 在列内找到重复数字
-                    elif type([]) == type(arr[i][col]):
+                    elif isinstance(arr[i][col], list):
                         if var in arr[i][col]:
                             return False
 
@@ -309,12 +310,12 @@ class Sudoku:
             for i in range(Sudoku.SCALE):
                 for j in range(Sudoku.SCALE):
                     if start_row + i != row or start_col + j != col:
-                        #print u"i:",i,", j",j
-                        if type(0) == type(arr[start_row + i][start_col + j]):
+                        #print("i:",i,", j",j)
+                        if isinstance(arr[start_row + i][start_col + j], int):
                             if var == arr[start_row + i][start_col + j]:
                                 return False    # 在区内找到重复数字
-                        elif type([]) == type(arr[start_row + i][start_col + j]):
-                            #print var, 'in', arr[start_row + i][start_col + j]
+                        elif isinstance(arr[start_row + i][start_col + j], list):
+                            #print(var, 'in', arr[start_row + i][start_col + j])
                             if var in arr[start_row + i][start_col + j]:
                                 return False    # 在区内找到重复数字
 
@@ -326,7 +327,8 @@ class Sudoku:
         if grid >= (0, 0) and grid <= (Sudoku.GRID_NUM - 1, Sudoku.GRID_NUM - 1):
             for i in range(Sudoku.GRID_NUM):
                 for j in range(Sudoku.GRID_NUM):
-                    if i == grid[0] or j == grid[1] or (i // Sudoku.SCALE == grid[0] // Sudoku.SCALE and j // Sudoku.SCALE == grid[1] // Sudoku.SCALE):
+                    if i == grid[0] or j == grid[1] or \
+                       (i // Sudoku.SCALE == grid[0] // Sudoku.SCALE and j // Sudoku.SCALE == grid[1] // Sudoku.SCALE):
                         result_list.append((i, j))
         return result_list
 
@@ -336,7 +338,7 @@ class Sudoku:
         result_list = []
         if grid >= (0, 0) and grid <= (Sudoku.GRID_NUM - 1, Sudoku.GRID_NUM - 1):
             for j in range(Sudoku.GRID_NUM):
-                result_list.append(grid[0], j)
+                result_list.append((grid[0], j)) # Changed to tuple
         return result_list
 
 
@@ -345,7 +347,7 @@ class Sudoku:
         result_list = []
         if grid >= (0, 0) and grid <= (Sudoku.GRID_NUM - 1, Sudoku.GRID_NUM - 1):
             for i in range(Sudoku.GRID_NUM):
-                result_list.append(i, grid[1])
+                result_list.append((i, grid[1])) # Changed to tuple
         return result_list
 
 
@@ -356,7 +358,7 @@ class Sudoku:
             for i in range(Sudoku.GRID_NUM):
                 for j in range(Sudoku.GRID_NUM):
                     if i // Sudoku.SCALE == grid[0] // Sudoku.SCALE and j // Sudoku.SCALE == grid[1] // Sudoku.SCALE:
-                        result_list.append(i, j)
+                        result_list.append((i, j)) # Changed to tuple
         return result_list
 
 
@@ -370,23 +372,23 @@ class Sudoku:
                     for grid in self.__get_affect((i, j)):
                         if grid != (i, j):
                             if self.__answer_sudoku[grid[0]][grid[1]] == self.__answer_sudoku[i][j]:
-                                if i == grid[0]:
-                                    print u"数字[%d, %d]与[%d, %d]行内冲突!" % (i, j, grid[0], grid[1])
-                                elif j == grid[1]:
-                                    print u"数字[%d, %d]与[%d, %d]列内冲突!" % (i, j, grid[0], grid[1])
+                                if i == grid[0]: # type: ignore
+                                    print("数字[%d, %d]与[%d, %d]行内冲突!" % (i, j, grid[0], grid[1]))
+                                elif j == grid[1]: # type: ignore
+                                    print("数字[%d, %d]与[%d, %d]列内冲突!" % (i, j, grid[0], grid[1]))
                                 else:
-                                    print u"数字[%d, %d]与[%d, %d]区内冲突!" % (i, j, grid[0], grid[1])
+                                    print("数字[%d, %d]与[%d, %d]区内冲突!" % (i, j, grid[0], grid[1]))
                                 check_pass = False
                                 return
 
-        if check_pass:
+        if check_pass: # type: ignore
             all_fill = True
             for i in range(len(self.__answer_sudoku)):
                 if 0 in self.__answer_sudoku[i]:
                     all_fill = False
                     break
             if all_fill:
-                print u"答案符合规则,检查通过!"
+                print("答案符合规则,检查通过!")
 
 
     def paint(self, dc):
@@ -423,10 +425,10 @@ class Sudoku:
                         dc.DrawRectangle(self.__anchor_pos[0] + j * Sudoku.GRID_WIDTH, self.__anchor_pos[1] + i * Sudoku.GRID_WIDTH, Sudoku.GRID_WIDTH, Sudoku.GRID_WIDTH)
                     elif self.__actived_num in self.__draft_sudoku[i][j]:
                         idx = self.__draft_sudoku[i][j].index(self.__actived_num)
-                        x = j * Sudoku.GRID_WIDTH + self.__anchor_pos[0] + (idx % Sudoku.SCALE) * Sudoku.GRID_WIDTH / Sudoku.SCALE
-                        y = i * Sudoku.GRID_WIDTH + self.__anchor_pos[1] + (idx // Sudoku.SCALE) * Sudoku.GRID_WIDTH / Sudoku.SCALE
+                        x = j * Sudoku.GRID_WIDTH + self.__anchor_pos[0] + (idx % Sudoku.SCALE) * Sudoku.GRID_WIDTH // Sudoku.SCALE
+                        y = i * Sudoku.GRID_WIDTH + self.__anchor_pos[1] + (idx // Sudoku.SCALE) * Sudoku.GRID_WIDTH // Sudoku.SCALE
                         dc.SetPen(wx.Pen("Gray"))
-                        dc.DrawRectangle(x, y, Sudoku.GRID_WIDTH / Sudoku.SCALE, Sudoku.GRID_WIDTH / Sudoku.SCALE)
+                        dc.DrawRectangle(x, y, Sudoku.GRID_WIDTH // Sudoku.SCALE, Sudoku.GRID_WIDTH // Sudoku.SCALE)
 
 
     def __paint_current_grid(self, dc):
@@ -477,18 +479,18 @@ class Sudoku:
                     # 冲突答案颜色
                     dc.SetTextForeground("Red");
 
-            offset_x = (Sudoku.GRID_WIDTH - dc.GetTextExtent(str(num))[0]) / 2
-            offset_y = (Sudoku.GRID_WIDTH - dc.GetTextExtent(str(num))[1]) / 2 + 1     # Y轴上向下偏移一个像素, 避免太过靠上
+            offset_x = (Sudoku.GRID_WIDTH - dc.GetTextExtent(str(num))[0]) // 2
+            offset_y = (Sudoku.GRID_WIDTH - dc.GetTextExtent(str(num))[1]) // 2 + 1     # Y轴上向下偏移一个像素, 避免太过靠上
         else:
             # 绘制备注数字
-            myFont = wx.Font(Sudoku.FONT_SIZE / 2, wx.SWISS, wx.NORMAL, wx.NORMAL)
+            myFont = wx.Font(Sudoku.FONT_SIZE // 2, wx.SWISS, wx.NORMAL, wx.NORMAL)
             dc.SetFont(myFont)
             dc.SetTextForeground("#A1A1A1");
 
-            offset_x = (Sudoku.GRID_WIDTH / Sudoku.SCALE - dc.GetTextExtent(str(num))[0]) / 2
-            offset_x += (idx % Sudoku.SCALE) * Sudoku.GRID_WIDTH / Sudoku.SCALE
-            offset_y = (Sudoku.GRID_WIDTH / Sudoku.SCALE - dc.GetTextExtent(str(num))[1]) / 2 + 1  # Y轴上向下偏移一个像素, 避免太过靠上
-            offset_y += (idx // Sudoku.SCALE) * Sudoku.GRID_WIDTH / Sudoku.SCALE
+            offset_x = (Sudoku.GRID_WIDTH // Sudoku.SCALE - dc.GetTextExtent(str(num))[0]) // 2
+            offset_x += (idx % Sudoku.SCALE) * Sudoku.GRID_WIDTH // Sudoku.SCALE
+            offset_y = (Sudoku.GRID_WIDTH // Sudoku.SCALE - dc.GetTextExtent(str(num))[1]) // 2 + 1  # Y轴上向下偏移一个像素, 避免太过靠上
+            offset_y += (idx // Sudoku.SCALE) * Sudoku.GRID_WIDTH // Sudoku.SCALE
 
         dc.DrawText(str(num), self.__anchor_pos[0] + col * Sudoku.GRID_WIDTH + offset_x, self.__anchor_pos[1] + row * Sudoku.GRID_WIDTH + offset_y)
 
@@ -568,5 +570,4 @@ class Sudoku:
 
 
 if __name__ == "__main__":
-    print u"I'm Sudoku class."
-
+    print("I'm Sudoku class.")
