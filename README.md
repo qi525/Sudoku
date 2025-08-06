@@ -1,6 +1,7 @@
 # Python Sudoku
 
 使用Python 2.7制作的数独游戏，运行SudokuApp.py启动
+现在使用gemini进行重构项目，让python3.12环境能够运行
 
 * 内置题库，支持题目粘贴
 * 辅助提示
