@@ -24,6 +24,12 @@ class SudokuCanvas(wx.Panel):
         self.thickness = 1
         self.pen = wx.Pen(self.color, self.thickness, wx.SOLID)
 
+        # 确保面板可以获得焦点 (wx.Panel 默认可获得焦点，无需 SetCanFocus(True))
+        # 移除了 CanFocus() 和 AcceptsFocus() 的打印，因为它们不是直接的方法或可能导致混淆
+        # print(f"SudokuCanvas: CanFocus() initial: {self.CanFocus()}")
+        # print(f"SudokuCanvas: AcceptsFocus() initial: {self.AcceptsFocus()}")
+
+
         # 添加数独游戏
         self.margin = margin = 20
         self.sudoku = sudoku = c_sudoku.Sudoku((margin, margin))
@@ -74,7 +80,7 @@ class SudokuCanvas(wx.Panel):
         self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown) # 处理特殊键和数字小键盘
         self.Bind(wx.EVT_CHAR, self.OnChar)       # 处理字符输入（主键盘数字）
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
-        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
+        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp) # 确保在鼠标抬起时也处理焦点
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
         self.Bind(wx.EVT_BUTTON, self.OnRestartButton, self.btn_restart)
@@ -82,12 +88,14 @@ class SudokuCanvas(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnRandomButton, self.btn_random)
         self.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)   # 绑定焦点获得事件
         self.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus) # 绑定焦点失去事件
+        self.Bind(wx.EVT_KEY_UP, self.OnKeyUp) # 重新绑定并调试 KeyUp
 
 
         # 开始游戏
         self.InitGame("030500001050600002000802035010200706002000080704010200000100300006380000000006000")
         #self.InitGame()
         self.ReBuffer()
+        print("SudokuCanvas: __init__ completed.")
 
 
     def InitGame(self, puzzle = ''):
@@ -122,16 +130,22 @@ class SudokuCanvas(wx.Panel):
 
         self.sudoku.paint(dc)
         self.reReBuffer = False
+        print("SudokuCanvas: ReBuffer called.")
+
 
     def OnSize(self, event):
         #print("OnSize")
         self.ReBuffer()
+        event.Skip()
 
 
     def OnLeftUp(self, event):
         #print("OnLeftUp")
-        #self.reReBuffer = True
-        pass
+        # 确保在鼠标抬起时也设置焦点
+        self.SetFocus()
+        self.reReBuffer = True
+        event.Skip()
+
 
     def OnIdle(self, event):
         #12 空闲时的处理
@@ -139,17 +153,22 @@ class SudokuCanvas(wx.Panel):
         if self.reReBuffer:
             self.ReBuffer()
             self.Refresh(False)
+        event.Skip()
+
 
     def OnPaint(self, event):
         #13 处理一个paint（描绘）请求
         #print("OnPaint")
+        print("SudokuCanvas: OnPaint called.") # Debugging print
         self.textProgress.SetLabel("完成度:" + str(self.sudoku.get_progress()) + "/" + str(self.sudoku.GRID_NUM ** 2))
         wx.BufferedPaintDC(self, self.__buffer_bitmap)
+        event.Skip()
+
 
     def OnKeyDown(self, event):
         '''处理非字符键盘事件（如ESC, DELETE, Ctrl组合键, 小键盘数字）'''
         keycode = event.GetKeyCode()
-        print(f"OnKeyDown - KeyCode: {keycode}, Event: {event.EventType}") # Debugging line
+        print(f"SudokuCanvas: OnKeyDown - KeyCode: {keycode}, EventType: {event.EventType}, IsControlDown: {event.ControlDown()}") # Debugging line
 
         handled = False
         if keycode == wx.WXK_ESCAPE:
@@ -164,10 +183,10 @@ class SudokuCanvas(wx.Panel):
             self.sudoku.input_num(num)
             self.reReBuffer = True
             handled = True
-        elif keycode == ord('C') and event.ControlDown(): # Ctrl+C
+        elif event.ControlDown() and keycode == ord('C'): # Ctrl+C
             self.OnCopy()
             handled = True
-        elif keycode == ord('V') and event.ControlDown(): # Ctrl+V
+        elif event.ControlDown() and keycode == ord('V'): # Ctrl+V
             self.OnPaste()
             handled = True
 
@@ -177,7 +196,7 @@ class SudokuCanvas(wx.Panel):
     def OnChar(self, event):
         '''处理字符键盘事件（如主键盘数字）'''
         keycode = event.GetKeyCode()
-        print(f"OnChar - KeyCode: {keycode}, Event: {event.EventType}") # Debugging line
+        print(f"SudokuCanvas: OnChar - KeyCode: {keycode}, EventType: {event.EventType}") # Debugging line
 
         handled = False
         if keycode >= ord('1') and keycode <= ord('9'): # 主键盘数字 1-9
@@ -225,12 +244,15 @@ class SudokuCanvas(wx.Panel):
         self.sudoku.active_grid((pos.x, pos.y)) # 将 wx.Point 转换为元组 (x, y)
         self.reReBuffer = True
         self.SetFocus() # 确保画布获得焦点，以便接收键盘输入
+        print(f"SudokuCanvas: OnLeftDown - SetFocus called. Current focus: {wx.Window.FindFocus()}")
+        event.Skip()
 
 
     def OnTimer(self, event):
         # 计时器+1， 并提示当前已使用的时间
         self.elapsed_time += 1
         self.textTimer.SetLabel(time.strftime('%H:%M:%S', time.gmtime(self.elapsed_time)))
+        event.Skip()
 
 
     def OnRestartButton(self, event):
@@ -238,6 +260,7 @@ class SudokuCanvas(wx.Panel):
         self.InitGame(self.sudoku.get_puzzle_str())
         self.SetFocus()     # 处理完按钮事件后必须将focus交给canvas, 否则无法响应键盘事件
         self.reReBuffer = True
+        event.Skip()
 
 
     def OnAutoCalcButton(self, event):
@@ -245,23 +268,27 @@ class SudokuCanvas(wx.Panel):
         self.sudoku.ai_calc()
         self.SetFocus()     # 处理完按钮事件后必须将focus交给canvas, 否则无法响应键盘事件
         self.reReBuffer = True
+        event.Skip()
 
 
     def OnRandomButton(self, event):
         self.InitGame()
         self.SetFocus()     # 处理完按钮事件后必须将focus交给canvas, 否则无法响应键盘事件
         self.reReBuffer = True
+        event.Skip()
 
 
     def OnKeyUp(self, event):
-        pass
+        keycode = event.GetKeyCode()
+        print(f"SudokuCanvas: OnKeyUp - KeyCode: {keycode}, EventType: {event.EventType}") # Debugging print
+        event.Skip()
 
     def OnSetFocus(self, event):
-        print("SudokuCanvas: Gained Focus")
+        print(f"SudokuCanvas: Gained Focus. Current focus: {wx.Window.FindFocus()}") # Debugging print
         event.Skip()
 
     def OnKillFocus(self, event):
-        print("SudokuCanvas: Lost Focus")
+        print(f"SudokuCanvas: Lost Focus. Current focus: {wx.Window.FindFocus()}") # Debugging print
         event.Skip()
 
 
@@ -270,14 +297,30 @@ class SudokuFrame(wx.Frame):
         wx.Frame.__init__(self, parent, -1, "Sudoku", pos = (600, 200), size = (200, 200))
         self.sketch = SudokuCanvas(self, -1)
         self.SetClientSize(self.sketch.GetClientSize())
+        # 在Frame层面绑定焦点事件，帮助调试
+        self.Bind(wx.EVT_SET_FOCUS, self.OnFrameSetFocus)
+        self.Bind(wx.EVT_KILL_FOCUS, self.OnFrameKillFocus)
+        print("SudokuFrame: __init__ completed.")
+
+    def OnFrameSetFocus(self, event):
+        print(f"SudokuFrame: Gained Focus. Current focus: {wx.Window.FindFocus()}")
+        event.Skip()
+
+    def OnFrameKillFocus(self, event):
+        print(f"SudokuFrame: Lost Focus. Current focus: {wx.Window.FindFocus()}")
+        event.Skip()
+
 
 class SudokuApp(wx.App):
     def OnInit(self):
+        print("SudokuApp: OnInit called.")
         frame = SudokuFrame(None)
         frame.Show()
-        # 尝试在应用启动时就设置焦点，确保画布能够接收输入
-        # 延迟调用 SetFocus，确保窗口完全显示并准备好
-        wx.CallAfter(frame.sketch.SetFocus)
+        # 尝试在应用启动时就设置焦点，确保窗口完全显示并准备好
+        # 优先设置 Frame 焦点，然后让 Frame 将焦点传递给 Canvas
+        wx.CallAfter(frame.SetFocus)
+        wx.CallAfter(frame.sketch.SetFocus) # 确保 Canvas 最终获得焦点
+        print(f"SudokuApp: OnInit - After CallAfter, Current focus: {wx.Window.FindFocus()}")
         return True
 
 if __name__ == "__main__":

@@ -535,10 +535,12 @@ class Sudoku:
             self.__actived_grid = (row, col)
             self.__actived_num = self.__answer_sudoku[row][col]    # 激活数字
             self.__affected_grids = self.__get_affect(self.__actived_grid)
+            print(f"激活格子: ({row}, {col}), 原始谜题值: {self.__puzzle_sudoku[row][col]}") # Debugging line
 
 
     def input_num(self, num):
         '''在当前激活格输入数字'''
+        print(f"尝试输入数字 {num} 到格子 {self.__actived_grid}, 原始谜题值: {self.__puzzle_sudoku[self.__actived_grid[0]][self.__actived_grid[1]]}") # Debugging line
         if num in range(1, Sudoku.GRID_NUM + 1) and self.__actived_grid >= (0, 0):
             if self.__puzzle_sudoku[self.__actived_grid[0]][self.__actived_grid[1]] == 0:
                 self.__answer_sudoku[self.__actived_grid[0]][self.__actived_grid[1]] = num
